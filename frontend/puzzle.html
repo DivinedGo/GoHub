@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Puzzle</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="puzzle-title">Loading Puzzle...</h1>
+            <p id="puzzle-description"></p>
+        </div>
+
+        <div class="nav">
+            <a href="#" id="back-link">← Back to Collection</a>
+            <a href="#" onclick="showPuzzleInfo()">Puzzle Info</a>
+            <a href="#" onclick="showHint()">Hint</a>
+            <a href="#" onclick="resetPuzzle()">Reset</a>
+        </div>
+
+        <div class="board-container">
+            <!-- Go Board -->
+            <div class="go-board">
+                <h3>
+                    <span id="next-to-play">Black</span> to Play
+                    <span id="difficulty-badge" style="background: #1e3c72; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; margin-left: 10px;"></span>
+                </h3>
+                <div class="board-coords" id="board-container">
+                    <div class="board-grid" id="board-grid">
+                        <!-- Board will be generated here -->
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn btn-secondary" onclick="showSolution()">Show Solution</button>
+                    <button class="btn btn-danger" onclick="resetPuzzle()">Reset Puzzle</button>
+                </div>
+            </div>
+
+            <!-- Status Panel -->
+            <div class="control-panel">
+                <h3>Puzzle Status</h3>
+                
+                <div class="control-group">
+                    <div id="move-status" class="status-info">
+                        <p>Click on the board to place your move.</p>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4>Move History</h4>
+                    <div id="move-history" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                        <p>No moves yet</p>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4>Quick Stats</h4>
+                    <div id="puzzle-stats" class="status-info">
+                        <p><strong>Views:</strong> <span id="puzzle-views">0</span></p>
+                        <p><strong>Likes:</strong> <span id="puzzle-likes">0</span></p>
+                        <p><strong>Completed:</strong> <span id="puzzle-completed">0</span></p>
+                        <p><strong>Success Rate:</strong> <span id="success-rate">0%</span></p>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn" onclick="likePuzzle()" id="like-btn">❤️ Like Puzzle</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solution Display -->
+        <div class="variations-container" id="solution-section" style="display: none;">
+            <h3>Solution Explorer</h3>
+            
+            <!-- Solution Board -->
+            <div class="solution-board-container">
+                <div class="go-board">
+                    <h3>
+                        Solution: <span id="solution-status">Ready to explore</span>
+                    </h3>
+                    <div class="board-coords" id="solution-board-container">
+                        <div class="board-grid" id="solution-board-grid">
+                            <!-- Solution board will be generated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Solution Controls -->
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button class="btn btn-secondary" onclick="previousSolutionMove()" id="prev-move-btn" disabled>◄ Previous</button>
+                        <button class="btn" onclick="nextSolutionMove()" id="next-move-btn">Next ►</button>
+                        <button class="btn btn-secondary" onclick="resetSolutionBoard()">Reset</button>
+                    </div>
+                    
+                    <!-- Move Counter -->
+                    <div style="text-align: center; margin-top: 10px;">
+                        <span id="solution-move-counter">Move 0 of 0</span>
+                    </div>
+                </div>
+                
+                <!-- Variation Selector -->
+                <div class="solution-panel">
+                    <h4>Available Variations</h4>
+                    <div id="variation-selector">
+                        <!-- Variation buttons will be generated here -->
+                    </div>
+                    
+                    <div id="solution-description" class="status-info" style="margin-top: 15px;">
+                        <p>Select a variation to explore the solution interactively.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="nextPuzzle()">Next Puzzle</button>
+                <button class="btn btn-secondary" onclick="hideSolution()">Hide Solution</button>
+            </div>
+        </div>
+
+        <!-- Status messages -->
+        <div id="status-messages"></div>
+    </div>
+
+    <!-- Puzzle Info Modal -->
+    <div id="puzzleInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('puzzleInfoModal')">&times;</span>
+            <h2>Puzzle Information</h2>
+            <div id="puzzle-info-content">
+                <!-- Puzzle info will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hint Modal -->
+    <div id="hintModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('hintModal')">&times;</span>
+            <h2>Hint</h2>
+            <div id="hint-content">
+                <!-- Hint will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="completionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('completionModal')">&times;</span>
+            <h2>🎉 Puzzle Solved!</h2>
+            <div id="completion-content">
+                <div class="status-success">
+                    <p>Congratulations! You solved the puzzle correctly!</p>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" onclick="nextPuzzle()">Next Puzzle</button>
+                    <button class="btn btn-secondary" onclick="closeModal('completionModal')">Stay Here</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let puzzle = null;
+        let collection = null;
+        let board = Array(19).fill().map(() => Array(19).fill(null));
+        let moveHistory = [];
+        let currentPlayer = 'black';
+        let puzzleSolved = false;
+        let showingSolution = false;
+        let koPosition = null; // For ko rule enforcement
+        
+        // Solution explorer variables
+        let solutionBoard = Array(19).fill().map(() => Array(19).fill(null));
+        let currentVariation = null;
+        let currentSolutionMove = 0;
+        let solutionMoves = [];
+
+        // Get puzzle ID from URL
+        const pathParts = window.location.pathname.split('/');
+        const puzzleId = pathParts[pathParts.length - 1];
+
+        // Load puzzle on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPuzzle();
+        });
+
+        // Load puzzle data
+        async function loadPuzzle() {
+            try {
+                // Check if we're running from file:// (local development)
+                if (window.location.protocol === 'file:') {
+                    loadDemoPuzzle();
+                    return;
+                }
+
+                // Load puzzle from API
+                const puzzleResponse = await fetch(`/api/puzzles/${puzzleId}`);
+                if (!puzzleResponse.ok) {
+                    throw new Error('Puzzle not found');
+                }
+                puzzle = await puzzleResponse.json();
+
+                // Load collection info
+                const collectionResponse = await fetch(`/api/collections/${puzzle.collectionId}`);
+                if (collectionResponse.ok) {
+                    collection = await collectionResponse.json();
+                }
+
+                // Initialize puzzle
+                initializePuzzle();
+
+                // Update view count
+                await updatePuzzleViews();
+
+            } catch (error) {
+                console.error('Error loading puzzle:', error);
+                showStatusMessage('Error loading puzzle. Please try again.', 'error');
+            }
+        }
+
+        // Load demo puzzle for local file testing
+        function loadDemoPuzzle() {
+            // Create a demo puzzle
+            puzzle = {
+                _id: 'demo-puzzle',
+                name: 'Demo Life and Death Puzzle',
+                description: 'Save the white group by capturing the black stones.',
+                difficulty: 5,
+                category: 'life-and-death',
+                nextToPlay: 'white',
+                initialPosition: createDemoPosition(),
+                variations: [
+                    {
+                        correct: true,
+                        moves: [
+                            { row: 1, col: 1, color: 'white' },
+                            { row: 0, col: 1, color: 'black' },
+                            { row: 0, col: 0, color: 'white' }
+                        ]
+                    }
+                ],
+                createdAt: new Date().toISOString()
+            };
+
+            // Create demo collection
+            collection = {
+                _id: 'demo-collection',
+                name: 'Demo Collection',
+                description: 'Demo puzzles for testing'
+            };
+
+            initializePuzzle();
+        }
+
+        // Create demo board position
+        function createDemoPosition() {
+            const position = Array(19).fill().map(() => Array(19).fill(null));
+            
+            // Add some demo stones for a corner life and death puzzle
+            // Black stones
+            position[2][2] = 'black';
+            position[2][3] = 'black';
+            position[2][4] = 'black';
+            position[3][2] = 'black';
+            position[4][2] = 'black';
+            position[4][3] = 'black';
+            
+            // White stones that need to live
+            position[3][3] = 'white';
+            position[3][4] = 'white';
+            position[4][4] = 'white';
+            
+            return position;
+        }
+
+        // Initialize puzzle
+        function initializePuzzle() {
+            // Set page title and description
+            document.getElementById('puzzle-title').textContent = puzzle.name;
+            document.getElementById('puzzle-description').textContent = puzzle.description || '';
+            document.title = `${puzzle.name} - Go Puzzle`;
+
+            // Set back link
+            if (collection && window.location.protocol !== 'file:') {
+                document.getElementById('back-link').href = `/puzzle-collections/${collection._id}`;
+            } else {
+                document.getElementById('back-link').href = '#';
+                document.getElementById('back-link').onclick = (e) => {
+                    e.preventDefault();
+                    showStatusMessage('Demo mode - Back navigation disabled', 'info');
+                };
+            }
+
+            // Set difficulty badge
+            document.getElementById('difficulty-badge').textContent = `Difficulty: ${puzzle.difficulty}/10`;
+
+            // Set next to play
+            currentPlayer = puzzle.nextToPlay;
+            document.getElementById('next-to-play').textContent = 
+                currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
+
+            // Initialize board with puzzle position
+            board = puzzle.initialPosition.map(row => [...row]);
+            
+            // Initialize board display
+            initializeBoard();
+            updateBoardDisplay();
+
+            // Update puzzle stats
+            updatePuzzleStats();
+
+            // Clear move status
+            updateMoveStatus('Click on the board to place your move.');
+        }
+
+        // Initialize the Go board
+        function initializeBoard() {
+            const boardGrid = document.getElementById('board-grid');
+            boardGrid.innerHTML = '';
+
+            // Create board lines
+            const linesContainer = document.createElement('div');
+            linesContainer.className = 'board-lines';
+            
+            // Create 19 horizontal and vertical lines for a 19x19 board
+            for (let i = 0; i < 19; i++) {
+                // Horizontal lines - positioned from 0 to 432px in 18 intervals
+                const hLine = document.createElement('div');
+                hLine.className = 'board-line horizontal';
+                hLine.style.top = `${i * 24}px`;
+                linesContainer.appendChild(hLine);
+                
+                // Vertical lines - positioned from 0 to 432px in 18 intervals
+                const vLine = document.createElement('div');
+                vLine.className = 'board-line vertical';
+                vLine.style.left = `${i * 24}px`;
+                linesContainer.appendChild(vLine);
+            }
+            
+            boardGrid.appendChild(linesContainer);
+
+            // Create coordinate labels
+            const coords = 'ABCDEFGHJKLMNOPQRST';
+            
+            // Create intersections
+            for (let row = 0; row < 19; row++) {
+                for (let col = 0; col < 19; col++) {
+                    const intersection = document.createElement('div');
+                    intersection.className = 'intersection';
+                    intersection.dataset.row = row;
+                    intersection.dataset.col = col;
+                    intersection.onclick = () => handleIntersectionClick(row, col);
+                    
+                    // Position intersection at line crossings (exactly on the lines)
+                    intersection.style.left = `${col * 24}px`;
+                    intersection.style.top = `${row * 24}px`;
+                    
+                    // Add coordinate labels on edges
+                    if (row === 0) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-top';
+                        coordLabel.textContent = coords[col];
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (row === 18) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-bottom';
+                        coordLabel.textContent = coords[col];
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (col === 0) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-left';
+                        coordLabel.textContent = 19 - row;
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (col === 18) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-right';
+                        coordLabel.textContent = 19 - row;
+                        intersection.appendChild(coordLabel);
+                    }
+                    
+                    boardGrid.appendChild(intersection);
+                }
+            }
+            
+            // Add star points
+            addStarPoints(boardGrid);
+        }
+
+        // Add star points to the board
+        function addStarPoints(boardGrid) {
+            const starPoints = [
+                [3, 3], [3, 9], [3, 15],
+                [9, 3], [9, 9], [9, 15],
+                [15, 3], [15, 9], [15, 15]
+            ];
+            
+            starPoints.forEach(([row, col]) => {
+                const starPoint = document.createElement('div');
+                starPoint.className = 'star-point';
+                starPoint.style.left = `${col * 24}px`;
+                starPoint.style.top = `${row * 24}px`;
+                boardGrid.appendChild(starPoint);
+            });
+        }
+
+        // Handle intersection click
+        function handleIntersectionClick(row, col) {
+            if (puzzleSolved || showingSolution) {
+                showStatusMessage('Puzzle is already solved or showing solution', 'info');
+                return;
+            }
+
+            if (board[row][col] !== null) {
+                showStatusMessage('Cannot place stone on occupied intersection', 'error');
+                return;
+            }
+
+            // Check ko rule
+            if (isKoViolation(row, col, currentPlayer)) {
+                showStatusMessage('Ko rule violation - cannot recapture immediately', 'error');
+                return;
+            }
+
+            // Check if move is suicide (not allowed unless it captures opponent stones)
+            if (isSuicideMove(row, col, currentPlayer)) {
+                showStatusMessage('Suicide move not allowed', 'error');
+                return;
+            }
+
+            // Place move
+            placeMove(row, col);
+        }
+
+        // Check if move violates ko rule
+        function isKoViolation(row, col, color) {
+            if (koPosition && koPosition.row === row && koPosition.col === col) {
+                return true;
+            }
+            return false;
+        }
+
+        // Check if move is suicide
+        function isSuicideMove(row, col, color) {
+            // Temporarily place the stone
+            board[row][col] = color;
+            
+            // Check if this group has liberties
+            const group = getGroup(row, col);
+            const hasLiberties = groupHasLiberties(group);
+            
+            // Check if it captures opponent stones
+            const capturesOpponent = checkCaptures(row, col, color).length > 0;
+            
+            // Remove temporary stone
+            board[row][col] = null;
+            
+            // It's suicide if no liberties and doesn't capture
+            return !hasLiberties && !capturesOpponent;
+        }
+
+        // Get all stones connected to the given position
+        function getGroup(row, col) {
+            const color = board[row][col];
+            if (!color) return [];
+            
+            const group = [];
+            const visited = new Set();
+            const stack = [`${row},${col}`];
+            
+            while (stack.length > 0) {
+                const current = stack.pop();
+                if (visited.has(current)) continue;
+                
+                visited.add(current);
+                const [r, c] = current.split(',').map(Number);
+                group.push([r, c]);
+                
+                // Check adjacent positions
+                const adjacent = [
+                    [r-1, c], [r+1, c], [r, c-1], [r, c+1]
+                ];
+                
+                for (const [ar, ac] of adjacent) {
+                    if (ar >= 0 && ar < 19 && ac >= 0 && ac < 19 && 
+                        board[ar][ac] === color && !visited.has(`${ar},${ac}`)) {
+                        stack.push(`${ar},${ac}`);
+                    }
+                }
+            }
+            
+            return group;
+        }
+
+        // Check if group has liberties (empty adjacent points)
+        function groupHasLiberties(group) {
+            for (const [row, col] of group) {
+                const adjacent = [
+                    [row-1, col], [row+1, col], [row, col-1], [row, col+1]
+                ];
+                
+                for (const [ar, ac] of adjacent) {
+                    if (ar >= 0 && ar < 19 && ac >= 0 && ac < 19 && board[ar][ac] === null) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Check what stones would be captured by this move
+        function checkCaptures(row, col, color) {
+            const captured = [];
+            const opponentColor = color === 'black' ? 'white' : 'black';
+            
+            // Check adjacent opponent groups
+            const adjacent = [
+                [row-1, col], [row+1, col], [row, col-1], [row, col+1]
+            ];
+            
+            for (const [ar, ac] of adjacent) {
+                if (ar >= 0 && ar < 19 && ac >= 0 && ac < 19 && 
+                    board[ar][ac] === opponentColor) {
+                    
+                    const group = getGroup(ar, ac);
+                    if (!groupHasLiberties(group)) {
+                        captured.push(...group);
+                    }
+                }
+            }
+            
+            return captured;
+        }
+
+        // Place a move
+        function placeMove(row, col) {
+            // Check what stones will be captured
+            const capturedStones = checkCaptures(row, col, currentPlayer);
+            
+            // Record move
+            const move = {
+                row: row,
+                col: col,
+                color: currentPlayer,
+                moveNumber: moveHistory.length + 1,
+                captured: capturedStones.length
+            };
+
+            // Place stone on board
+            board[row][col] = currentPlayer;
+            
+            // Remove captured stones
+            for (const [capturedRow, capturedCol] of capturedStones) {
+                board[capturedRow][capturedCol] = null;
+            }
+            
+            // Update ko position (for ko rule)
+            updateKoPosition(row, col, capturedStones);
+            
+            moveHistory.push(move);
+
+            // Update display
+            updateBoardDisplay();
+            updateMoveHistory();
+
+            // Check if move is correct
+            checkMove(move);
+
+            // Switch player for next move
+            currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+            document.getElementById('next-to-play').textContent = 
+                currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
+        }
+
+        // Update ko position for ko rule enforcement
+        function updateKoPosition(row, col, capturedStones) {
+            // Ko situation: single stone captured, and the capturing stone would be 
+            // immediately capturable if opponent played at the captured stone's position
+            if (capturedStones.length === 1) {
+                const [capturedRow, capturedCol] = capturedStones[0];
+                
+                // Check if the capturing stone would be capturable
+                const capturedColor = currentPlayer === 'black' ? 'white' : 'black';
+                board[capturedRow][capturedCol] = capturedColor; // Temporarily place opponent stone
+                
+                const wouldCapture = checkCaptures(capturedRow, capturedCol, capturedColor);
+                const capturesCurrentStone = wouldCapture.some(([r, c]) => r === row && c === col);
+                
+                board[capturedRow][capturedCol] = null; // Remove temporary stone
+                
+                if (capturesCurrentStone) {
+                    koPosition = { row: capturedRow, col: capturedCol };
+                } else {
+                    koPosition = null;
+                }
+            } else {
+                koPosition = null;
+            }
+        }
+
+        // Check if the move is correct
+        function checkMove(move) {
+            const currentSequence = moveHistory.map(m => `${m.row},${m.col},${m.color}`);
+            
+            // Check against all variations
+            let foundMatch = null;
+            let isCorrectSolution = false;
+
+            for (let variation of puzzle.variations) {
+                if (isSequenceMatch(currentSequence, variation.moves)) {
+                    foundMatch = variation;
+                    isCorrectSolution = variation.correct;
+                    break;
+                }
+            }
+
+            if (foundMatch) {
+                if (isCorrectSolution) {
+                    // Correct solution
+                    puzzleSolved = true;
+                    updateMoveStatus('Correct!', 'success');
+                    recordPuzzleCompletion(true);
+                    setTimeout(() => {
+                        document.getElementById('completionModal').style.display = 'block';
+                    }, 1500);
+                } else {
+                    // Incorrect solution
+                    updateMoveStatus('Incorrect!', 'error');
+                    recordPuzzleAttempt();
+                    setTimeout(() => {
+                        resetPuzzle();
+                    }, 2000);
+                }
+            }
+        }
+
+        // Check if current sequence matches a variation
+        function isSequenceMatch(currentSequence, variationMoves) {
+            if (currentSequence.length > variationMoves.length) return false;
+            
+            for (let i = 0; i < currentSequence.length; i++) {
+                const currentMove = currentSequence[i];
+                const variationMove = `${variationMoves[i].row},${variationMoves[i].col},${variationMoves[i].color}`;
+                if (currentMove !== variationMove) return false;
+            }
+            
+            return currentSequence.length === variationMoves.length;
+        }
+
+        // Update board display
+        function updateBoardDisplay() {
+            const intersections = document.querySelectorAll('.intersection');
+            
+            intersections.forEach(intersection => {
+                const row = parseInt(intersection.dataset.row);
+                const col = parseInt(intersection.dataset.col);
+                
+                // Remove existing stones
+                const existingStone = intersection.querySelector('.stone');
+                if (existingStone) {
+                    intersection.removeChild(existingStone);
+                }
+
+                // Update intersection state
+                if (board[row][col] !== null) {
+                    intersection.classList.add('occupied');
+                } else {
+                    intersection.classList.remove('occupied');
+                }
+
+                // Add stone if present
+                if (board[row][col] !== null) {
+                    const stone = document.createElement('div');
+                    stone.className = `stone ${board[row][col]}`;
+                    
+                    // Check if this is the last move
+                    const lastMove = moveHistory[moveHistory.length - 1];
+                    if (lastMove && lastMove.row === row && lastMove.col === col) {
+                        stone.classList.add('last-move');
+                    }
+                    
+                    // Add move number if it's a played move
+                    const move = moveHistory.find(m => m.row === row && m.col === col);
+                    if (move) {
+                        stone.textContent = move.moveNumber;
+                        stone.style.color = move.color === 'black' ? 'white' : 'black';
+                        stone.style.fontSize = '10px';
+                        stone.style.fontWeight = 'bold';
+                        stone.style.display = 'flex';
+                        stone.style.alignItems = 'center';
+                        stone.style.justifyContent = 'center';
+                    }
+                    
+                    intersection.appendChild(stone);
+                }
+
+                // Highlight ko-forbidden positions
+                if (koPosition && koPosition.row === row && koPosition.col === col) {
+                    intersection.classList.add('ko-forbidden');
+                } else {
+                    intersection.classList.remove('ko-forbidden');
+                }
+            });
+        }
+
+        // Update move history display
+        function updateMoveHistory() {
+            const historyDiv = document.getElementById('move-history');
+            
+            if (moveHistory.length === 0) {
+                historyDiv.innerHTML = '<p>No moves yet</p>';
+                return;
+            }
+
+            const coords = 'ABCDEFGHJKLMNOPQRST';
+            let html = '<div class="move-sequence">';
+            
+            moveHistory.forEach(move => {
+                const coord = `${coords[move.col]}${19 - move.row}`;
+                html += `
+                    <div class="move-item">
+                        ${move.moveNumber}. ${move.color.charAt(0).toUpperCase()} ${coord}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            historyDiv.innerHTML = html;
+        }
+
+        // Update move status
+        function updateMoveStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('move-status');
+            statusDiv.className = `status-${type}`;
+            statusDiv.innerHTML = `<p>${message}</p>`;
+        }
+
+        // Update puzzle statistics
+        function updatePuzzleStats() {
+            document.getElementById('puzzle-views').textContent = puzzle.views || 0;
+            document.getElementById('puzzle-likes').textContent = puzzle.likes || 0;
+            document.getElementById('puzzle-completed').textContent = puzzle.completedCount || 0;
+            
+            const attempts = puzzle.attemptCount || 0;
+            const completed = puzzle.completedCount || 0;
+            const successRate = attempts > 0 ? Math.round((completed / attempts) * 100) : 0;
+            document.getElementById('success-rate').textContent = `${successRate}%`;
+        }
+
+        // Undo last move
+        function undoMove() {
+            if (moveHistory.length === 0) return;
+
+            const lastMove = moveHistory.pop();
+            board[lastMove.row][lastMove.col] = null;
+            
+            // Switch back to previous player
+            currentPlayer = lastMove.color;
+            document.getElementById('next-to-play').textContent = 
+                currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
+            
+            updateBoardDisplay();
+            updateMoveHistory();
+            updateMoveStatus('Move undone. Continue playing...');
+            
+            if (moveHistory.length === 0) {
+                document.getElementById('undo-btn').disabled = true;
+            }
+        }
+
+        // Reset puzzle
+        function resetPuzzle() {
+            board = puzzle.initialPosition.map(row => [...row]);
+            moveHistory = [];
+            currentPlayer = puzzle.nextToPlay;
+            puzzleSolved = false;
+            showingSolution = false;
+            koPosition = null; // Reset ko position
+            
+            document.getElementById('next-to-play').textContent = 
+                currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
+            
+            updateBoardDisplay();
+            updateMoveHistory();
+            updateMoveStatus('Puzzle reset. Click on the board to place your move.');
+            
+            document.getElementById('solution-section').style.display = 'none';
+        }
+
+        // Show solution
+        function showSolution() {
+            if (puzzleSolved) {
+                showStatusMessage('Puzzle already solved!', 'info');
+                return;
+            }
+
+            showingSolution = true;
+            const solutionSection = document.getElementById('solution-section');
+            
+            // Initialize solution board
+            initializeSolutionBoard();
+            
+            // Create variation selector
+            createVariationSelector();
+            
+            // Show the solution section
+            solutionSection.style.display = 'block';
+            
+            // Record that user viewed solution
+            recordPuzzleAttempt();
+            updateMoveStatus('Solution revealed. Select a variation to explore interactively.', 'info');
+        }
+
+        // Initialize the solution board
+        function initializeSolutionBoard() {
+            const boardGrid = document.getElementById('solution-board-grid');
+            boardGrid.innerHTML = '';
+
+            // Create board lines
+            const linesContainer = document.createElement('div');
+            linesContainer.className = 'board-lines';
+            
+            // Create 19 horizontal and vertical lines for a 19x19 board
+            for (let i = 0; i < 19; i++) {
+                // Horizontal lines - positioned from 0 to 432px in 18 intervals
+                const hLine = document.createElement('div');
+                hLine.className = 'board-line horizontal';
+                hLine.style.top = `${i * 24}px`;
+                linesContainer.appendChild(hLine);
+                
+                // Vertical lines - positioned from 0 to 432px in 18 intervals
+                const vLine = document.createElement('div');
+                vLine.className = 'board-line vertical';
+                vLine.style.left = `${i * 24}px`;
+                linesContainer.appendChild(vLine);
+            }
+            
+            boardGrid.appendChild(linesContainer);
+
+            // Create coordinate labels
+            const coords = 'ABCDEFGHJKLMNOPQRST';
+            
+            // Create intersections
+            for (let row = 0; row < 19; row++) {
+                for (let col = 0; col < 19; col++) {
+                    const intersection = document.createElement('div');
+                    intersection.className = 'intersection';
+                    intersection.dataset.row = row;
+                    intersection.dataset.col = col;
+                    
+                    // Position intersection at line crossings (exactly on the lines)
+                    intersection.style.left = `${col * 24}px`;
+                    intersection.style.top = `${row * 24}px`;
+                    
+                    // Add coordinate labels on edges
+                    if (row === 0) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-top';
+                        coordLabel.textContent = coords[col];
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (row === 18) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-bottom';
+                        coordLabel.textContent = coords[col];
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (col === 0) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-left';
+                        coordLabel.textContent = 19 - row;
+                        intersection.appendChild(coordLabel);
+                    }
+                    if (col === 18) {
+                        const coordLabel = document.createElement('div');
+                        coordLabel.className = 'coord-label coord-right';
+                        coordLabel.textContent = 19 - row;
+                        intersection.appendChild(coordLabel);
+                    }
+                    
+                    boardGrid.appendChild(intersection);
+                }
+            }
+            
+            // Add star points
+            addSolutionStarPoints(boardGrid);
+            
+            // Reset solution board to initial position
+            resetSolutionBoard();
+        }
+
+        // Add star points to the solution board
+        function addSolutionStarPoints(boardGrid) {
+            const starPoints = [
+                [3, 3], [3, 9], [3, 15],
+                [9, 3], [9, 9], [9, 15],
+                [15, 3], [15, 9], [15, 15]
+            ];
+            
+            starPoints.forEach(([row, col]) => {
+                const starPoint = document.createElement('div');
+                starPoint.className = 'star-point';
+                starPoint.style.left = `${col * 24}px`;
+                starPoint.style.top = `${row * 24}px`;
+                boardGrid.appendChild(starPoint);
+            });
+        }
+
+        // Create variation selector buttons
+        function createVariationSelector() {
+            const variationSelector = document.getElementById('variation-selector');
+            variationSelector.innerHTML = '';
+            
+            puzzle.variations.forEach((variation, index) => {
+                const button = document.createElement('button');
+                button.className = `variation-btn ${variation.correct ? 'correct' : 'incorrect'}`;
+                button.onclick = () => selectVariation(index);
+                
+                const typeLabel = variation.correct ? '✓ Correct' : '✗ Incorrect';
+                const moveCount = variation.moves.length;
+                
+                button.innerHTML = `
+                    <strong>${typeLabel} Solution ${index + 1}</strong><br>
+                    <small>${moveCount} move${moveCount !== 1 ? 's' : ''}</small>
+                `;
+                
+                variationSelector.appendChild(button);
+            });
+        }
+
+        // Select a variation to explore
+        function selectVariation(variationIndex) {
+            currentVariation = puzzle.variations[variationIndex];
+            solutionMoves = [...currentVariation.moves];
+            currentSolutionMove = 0;
+            
+            // Update button states
+            const buttons = document.querySelectorAll('.variation-btn');
+            buttons.forEach((btn, index) => {
+                btn.classList.toggle('active', index === variationIndex);
+            });
+            
+            // Reset solution board and update display
+            resetSolutionBoard();
+            updateSolutionDisplay();
+            
+            // Update description
+            const description = document.getElementById('solution-description');
+            const typeText = currentVariation.correct ? 'correct' : 'incorrect';
+            description.innerHTML = `
+                <p><strong>${currentVariation.correct ? 'Correct' : 'Incorrect'} Solution:</strong> 
+                ${solutionMoves.length} move${solutionMoves.length !== 1 ? 's' : ''}</p>
+                <p>Use the Previous/Next buttons to step through the solution.</p>
+            `;
+        }
+
+        // Hide solution
+        function hideSolution() {
+            showingSolution = false;
+            document.getElementById('solution-section').style.display = 'none';
+            updateMoveStatus('Solution hidden. Continue solving the puzzle.');
+        }
+
+        // Reset solution board to initial position
+        function resetSolutionBoard() {
+            // Copy initial position to solution board
+            solutionBoard = puzzle.initialPosition.map(row => [...row]);
+            currentSolutionMove = 0;
+            updateSolutionDisplay();
+        }
+
+        // Update solution board display
+        function updateSolutionDisplay() {
+            const intersections = document.querySelectorAll('#solution-board-grid .intersection');
+            
+            intersections.forEach(intersection => {
+                const row = parseInt(intersection.dataset.row);
+                const col = parseInt(intersection.dataset.col);
+                
+                // Remove existing stones
+                const existingStone = intersection.querySelector('.stone');
+                if (existingStone) {
+                    intersection.removeChild(existingStone);
+                }
+
+                // Add stone if present
+                if (solutionBoard[row][col] !== null) {
+                    const stone = document.createElement('div');
+                    stone.className = `stone ${solutionBoard[row][col]}`;
+                    
+                    // Check if this stone is from a move in the current sequence
+                    const moveIndex = solutionMoves.findIndex((move, index) => 
+                        index < currentSolutionMove && move.row === row && move.col === col
+                    );
+                    
+                    if (moveIndex !== -1) {
+                        stone.textContent = moveIndex + 1;
+                        stone.style.color = solutionMoves[moveIndex].color === 'black' ? 'white' : 'black';
+                        stone.style.fontSize = '10px';
+                        stone.style.fontWeight = 'bold';
+                        stone.style.display = 'flex';
+                        stone.style.alignItems = 'center';
+                        stone.style.justifyContent = 'center';
+                        
+                        // Highlight the last played move
+                        if (moveIndex === currentSolutionMove - 1) {
+                            stone.classList.add('last-move');
+                        }
+                    }
+                    
+                    intersection.appendChild(stone);
+                }
+            });
+            
+            // Update move counter and button states
+            updateSolutionControls();
+        }
+
+        // Update solution navigation controls
+        function updateSolutionControls() {
+            const prevBtn = document.getElementById('prev-move-btn');
+            const nextBtn = document.getElementById('next-move-btn');
+            const counter = document.getElementById('solution-move-counter');
+            const status = document.getElementById('solution-status');
+            
+            if (currentVariation) {
+                const totalMoves = solutionMoves.length;
+                counter.textContent = `Move ${currentSolutionMove} of ${totalMoves}`;
+                
+                prevBtn.disabled = currentSolutionMove === 0;
+                nextBtn.disabled = currentSolutionMove >= totalMoves;
+                
+                if (currentSolutionMove === 0) {
+                    status.textContent = 'Initial position - Click Next to see the first move';
+                } else if (currentSolutionMove >= totalMoves) {
+                    status.textContent = `${currentVariation.correct ? 'Correct' : 'Incorrect'} solution complete`;
+                } else {
+                    const nextMove = solutionMoves[currentSolutionMove];
+                    const coords = 'ABCDEFGHJKLMNOPQRST';
+                    const coord = `${coords[nextMove.col]}${19 - nextMove.row}`;
+                    status.textContent = `Next: ${nextMove.color} ${coord}`;
+                }
+            } else {
+                counter.textContent = 'No variation selected';
+                status.textContent = 'Select a variation to explore';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+        }
+
+        // Move to next solution move
+        function nextSolutionMove() {
+            if (!currentVariation || currentSolutionMove >= solutionMoves.length) return;
+            
+            // Apply the next move
+            const move = solutionMoves[currentSolutionMove];
+            solutionBoard[move.row][move.col] = move.color;
+            currentSolutionMove++;
+            
+            updateSolutionDisplay();
+        }
+
+        // Move to previous solution move
+        function previousSolutionMove() {
+            if (!currentVariation || currentSolutionMove <= 0) return;
+            
+            // Remove the last played move
+            currentSolutionMove--;
+            const move = solutionMoves[currentSolutionMove];
+            solutionBoard[move.row][move.col] = null;
+            
+            updateSolutionDisplay();
+        }
+
+        // Show puzzle info
+        function showPuzzleInfo() {
+            const infoContent = document.getElementById('puzzle-info-content');
+            const createdDate = new Date(puzzle.createdAt).toLocaleDateString();
+            
+            infoContent.innerHTML = `
+                <div class="status-info">
+                    <p><strong>Name:</strong> ${puzzle.name}</p>
+                    <p><strong>Description:</strong> ${puzzle.description || 'No description'}</p>
+                    <p><strong>Difficulty:</strong> ${puzzle.difficulty}/10</p>
+                    <p><strong>Category:</strong> ${formatCategory(puzzle.category)}</p>
+                    <p><strong>Next to Play:</strong> ${puzzle.nextToPlay.charAt(0).toUpperCase() + puzzle.nextToPlay.slice(1)}</p>
+                    <p><strong>Views:</strong> ${puzzle.views || 0}</p>
+                    <p><strong>Likes:</strong> ${puzzle.likes || 0}</p>
+                    <p><strong>Completed:</strong> ${puzzle.completedCount || 0} times</p>
+                    <p><strong>Created:</strong> ${createdDate}</p>
+                </div>
+            `;
+            
+            document.getElementById('puzzleInfoModal').style.display = 'block';
+        }
+
+        // Show hint
+        function showHint() {
+            const hintContent = document.getElementById('hint-content');
+            
+            // Generate a hint based on the first correct variation
+            const correctVariation = puzzle.variations.find(v => v.correct);
+            if (correctVariation && correctVariation.moves.length > 0) {
+                const firstMove = correctVariation.moves[0];
+                const coords = 'ABCDEFGHJKLMNOPQRST';
+                const coord = `${coords[firstMove.col]}${19 - firstMove.row}`;
+                
+                hintContent.innerHTML = `
+                    <div class="status-info">
+                        <p><strong>Hint:</strong> Consider playing at ${coord}.</p>
+                        <p>Look for key tactical themes like capturing, connection, or life and death.</p>
+                        <p>Think about what your opponent might do in response.</p>
+                    </div>
+                `;
+            } else {
+                hintContent.innerHTML = `
+                    <div class="status-info">
+                        <p>No specific hint available for this puzzle.</p>
+                        <p>Consider the fundamental Go principles:</p>
+                        <ul>
+                            <li>Look for captures and escapes</li>
+                            <li>Consider eye-making moves</li>
+                            <li>Think about connections and cuts</li>
+                            <li>Analyze the opponent's weaknesses</li>
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('hintModal').style.display = 'block';
+        }
+
+        // Format category name
+        function formatCategory(category) {
+            return category.split('-').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        // Like puzzle
+        async function likePuzzle() {
+            // Skip API calls in local file mode
+            if (window.location.protocol === 'file:') {
+                showStatusMessage('Demo mode - Like functionality disabled', 'info');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/puzzles/${puzzleId}/like`, { method: 'POST' });
+                if (response.ok) {
+                    puzzle.likes = (puzzle.likes || 0) + 1;
+                    updatePuzzleStats();
+                    showStatusMessage('Puzzle liked!', 'success');
+                } else {
+                    showStatusMessage('You have already liked this puzzle', 'info');
+                }
+            } catch (error) {
+                console.error('Error liking puzzle:', error);
+                showStatusMessage('Error liking puzzle', 'error');
+            }
+        }
+
+        // Record puzzle completion
+        async function recordPuzzleCompletion(solved) {
+            // Skip API calls in local file mode
+            if (window.location.protocol === 'file:') {
+                return;
+            }
+            
+            try {
+                await fetch(`/api/puzzles/${puzzleId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        solved: solved,
+                        moves: moveHistory.length 
+                    })
+                });
+                
+                // Update local stats
+                if (solved) {
+                    puzzle.completedCount = (puzzle.completedCount || 0) + 1;
+                }
+                updatePuzzleStats();
+                
+            } catch (error) {
+                // Error recording completion
+            }
+        }
+
+        // Record puzzle attempt
+        async function recordPuzzleAttempt() {
+            // Skip API calls in local file mode
+            if (window.location.protocol === 'file:') {
+                return;
+            }
+            
+            try {
+                await fetch(`/api/puzzles/${puzzleId}/attempt`, { method: 'POST' });
+            } catch (error) {
+                // Error recording attempt
+            }
+        }
+
+        // Update puzzle views
+        async function updatePuzzleViews() {
+            // Skip API calls in local file mode
+            if (window.location.protocol === 'file:') {
+                return;
+            }
+            
+            try {
+                await fetch(`/api/puzzles/${puzzleId}/view`, { method: 'POST' });
+                puzzle.views = (puzzle.views || 0) + 1;
+                updatePuzzleStats();
+            } catch (error) {
+                // Error updating views
+            }
+        }
+
+        // Next puzzle
+        async function nextPuzzle() {
+            // In local file mode, just show a message
+            if (window.location.protocol === 'file:') {
+                return;
+            }
+            
+            if (!collection) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/collections/${collection._id}/puzzles`);
+                if (!response.ok) throw new Error('Failed to load puzzles');
+                
+                const puzzles = await response.json();
+                const currentIndex = puzzles.findIndex(p => p._id === puzzleId);
+                
+                if (currentIndex === -1 || currentIndex >= puzzles.length - 1) {
+                    showStatusMessage('This is the last puzzle in the collection!', 'info');
+                    return;
+                }
+                
+                const nextPuzzle = puzzles[currentIndex + 1];
+                window.location.href = `/puzzles/${nextPuzzle._id}`;
+                
+            } catch (error) {
+                console.error('Error loading next puzzle:', error);
+                showStatusMessage('Error loading next puzzle', 'error');
+            }
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Show status message
+        function showStatusMessage(message, type) {
+            const container = document.getElementById('status-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            
+            container.appendChild(messageDiv);
+            
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                if (container.contains(messageDiv)) {
+                    container.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'u' && e.ctrlKey) {
+                e.preventDefault();
+                undoMove();
+            } else if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                resetPuzzle();
+            } else if (e.key === 'h' && e.ctrlKey) {
+                e.preventDefault();
+                showHint();
+            }
+        });
+    </script>
+</body>
+</html>

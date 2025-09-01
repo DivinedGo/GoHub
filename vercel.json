@@ -1,0 +1,57 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/server.js"
+    },
+    {
+      "src": "/puzzles$",
+      "dest": "/frontend/puzzles.html"
+    },
+    {
+      "src": "/puzzle-collections/([^/]+)$",
+      "dest": "/frontend/puzzle-collection.html"
+    },
+    {
+      "src": "/puzzles/([^/]+)$",
+      "dest": "/frontend/puzzle.html"
+    },
+    {
+      "src": "/puzzlesadmin27988794$",
+      "dest": "/frontend/puzzlesadmin27988794.html"
+    },
+    {
+      "src": "/puzzlesadmincreate27988794$",
+      "dest": "/frontend/puzzlesadmincreate27988794.html"
+    },
+    {
+      "src": "/styles.css",
+      "dest": "/frontend/styles.css"
+    },
+    {
+      "src": "/(.*\\.(css|js|html|png|jpg|gif|ico))$",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/puzzles.html"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb_uri",
+    "ADMIN_KEY": "@admin_key",
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "backend/server.js": {
+      "maxDuration": 30
+    }
+  }
+}

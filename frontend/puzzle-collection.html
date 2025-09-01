@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Collection</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="collection-title">Loading Collection...</h1>
+            <p id="collection-description"></p>
+        </div>
+
+        <div class="nav">
+            <a href="../puzzles.html">← Back to Collections</a>
+            <a href="#" onclick="showCollectionInfo()">Collection Info</a>
+            <a href="#" onclick="showProgress()">My Progress</a>
+        </div>
+
+        <div class="puzzle-table-container">
+            <div class="control-group" style="margin-bottom: 20px;">
+                <input type="text" id="search-input" placeholder="Search puzzles..." style="width: 300px; margin-right: 10px;">
+                <select id="category-filter" style="margin-right: 10px;">
+                    <option value="">All Categories</option>
+                    <option value="life-and-death">Life and Death</option>
+                    <option value="tesuji">Tesuji</option>
+                    <option value="endgame">Endgame</option>
+                    <option value="opening">Opening</option>
+                    <option value="middle-game">Middle Game</option>
+                    <option value="capturing">Capturing</option>
+                    <option value="connection">Connection</option>
+                    <option value="other">Other</option>
+                </select>
+                <select id="difficulty-filter">
+                    <option value="">All Difficulties</option>
+                    <option value="1">1-2 (Beginner)</option>
+                    <option value="3">3-4 (Elementary)</option>
+                    <option value="5">5-6 (Intermediate)</option>
+                    <option value="7">7-8 (Advanced)</option>
+                    <option value="9">9-10 (Expert)</option>
+                </select>
+            </div>
+
+            <div id="loading" style="text-align: center; display: none;">
+                <div class="loading"></div>
+                <p>Loading puzzles...</p>
+            </div>
+            
+            <table class="puzzle-table" id="puzzle-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th onclick="sortPuzzles('order')">Puzzle ↕</th>
+                        <th onclick="sortPuzzles('name')">Name ↕</th>
+                        <th onclick="sortPuzzles('difficulty')">Difficulty ↕</th>
+                        <th onclick="sortPuzzles('category')">Category ↕</th>
+                        <th onclick="sortPuzzles('views')">Views ↕</th>
+                        <th onclick="sortPuzzles('likes')">Likes ↕</th>
+                        <th onclick="sortPuzzles('completed')">Completed ↕</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="puzzle-tbody">
+                    <!-- Puzzles will be loaded here -->
+                </tbody>
+            </table>
+
+            <div id="no-puzzles" style="text-align: center; display: none;">
+                <h3>No puzzles found</h3>
+                <p>This collection doesn't have any puzzles yet.</p>
+            </div>
+        </div>
+
+        <!-- Status messages -->
+        <div id="status-messages"></div>
+    </div>
+
+    <!-- Collection Info Modal -->
+    <div id="collectionInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('collectionInfoModal')">&times;</span>
+            <h2>Collection Information</h2>
+            <div id="collection-info-content">
+                <!-- Collection info will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('progressModal')">&times;</span>
+            <h2>Your Progress</h2>
+            <div id="progress-content">
+                <!-- Progress will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let collection = null;
+        let puzzles = [];
+        let allPuzzles = [];
+        let sortDirection = {};
+        let userProgress = {};
+
+        // Get collection ID from URL
+        const pathParts = window.location.pathname.split('/');
+        const collectionId = pathParts[pathParts.length - 1];
+
+        // Load collection and puzzles on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCollection();
+            setupEventListeners();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search input
+            document.getElementById('search-input').addEventListener('input', filterPuzzles);
+            
+            // Filter dropdowns
+            document.getElementById('category-filter').addEventListener('change', filterPuzzles);
+            document.getElementById('difficulty-filter').addEventListener('change', filterPuzzles);
+        }
+
+        // Load collection data
+        async function loadCollection() {
+            const loading = document.getElementById('loading');
+            const table = document.getElementById('puzzle-table');
+            const noPuzzles = document.getElementById('no-puzzles');
+
+            loading.style.display = 'block';
+            table.style.display = 'none';
+            noPuzzles.style.display = 'none';
+
+            try {
+                // Load collection info
+                const collectionResponse = await fetch(`/api/collections/${collectionId}`);
+                if (!collectionResponse.ok) {
+                    throw new Error('Collection not found');
+                }
+                collection = await collectionResponse.json();
+
+                // Update page title and description
+                document.getElementById('collection-title').textContent = collection.name;
+                document.getElementById('collection-description').textContent = collection.description || '';
+                document.title = `${collection.name} - Go Puzzles`;
+
+                // Load puzzles
+                const puzzlesResponse = await fetch(`/api/collections/${collectionId}/puzzles`);
+                if (!puzzlesResponse.ok) {
+                    throw new Error('Failed to load puzzles');
+                }
+                allPuzzles = await puzzlesResponse.json();
+                puzzles = [...allPuzzles];
+
+                // Load user progress
+                await loadUserProgress();
+
+                loading.style.display = 'none';
+
+                if (puzzles.length === 0) {
+                    noPuzzles.style.display = 'block';
+                    return;
+                }
+
+                // Render puzzles
+                renderPuzzles();
+                table.style.display = 'table';
+
+                // Update collection views
+                await updateCollectionViews();
+
+            } catch (error) {
+                console.error('Error loading collection:', error);
+                loading.style.display = 'none';
+                
+                if (error.message === 'Collection not found') {
+                    document.getElementById('collection-title').textContent = 'Collection Not Found';
+                    showStatusMessage('The requested collection could not be found.', 'error');
+                } else {
+                    showStatusMessage('Error loading collection. Please try again.', 'error');
+                }
+            }
+        }
+
+        // Load user progress
+        async function loadUserProgress() {
+            try {
+                const response = await fetch(`/api/collections/${collectionId}/progress`);
+                if (response.ok) {
+                    userProgress = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading user progress:', error);
+            }
+        }
+
+        // Update collection views
+        async function updateCollectionViews() {
+            try {
+                await fetch(`/api/collections/${collectionId}/view`, { method: 'POST' });
+            } catch (error) {
+                console.error('Error updating views:', error);
+            }
+        }
+
+        // Render puzzles table
+        function renderPuzzles() {
+            const tbody = document.getElementById('puzzle-tbody');
+            tbody.innerHTML = '';
+
+            puzzles.forEach((puzzle, index) => {
+                const row = createPuzzleRow(puzzle, index + 1);
+                tbody.appendChild(row);
+            });
+        }
+
+        // Create puzzle table row
+        function createPuzzleRow(puzzle, order) {
+            const row = document.createElement('tr');
+            
+            // Get user's progress for this puzzle
+            const progress = userProgress[puzzle._id] || {};
+            const isCompleted = progress.completed || false;
+            const attempts = progress.attempts || 0;
+            
+            // Status icon
+            let statusIcon = '⚪'; // Not attempted
+            if (attempts > 0 && !isCompleted) {
+                statusIcon = '🔴'; // Attempted but not completed
+            } else if (isCompleted) {
+                statusIcon = '✅'; // Completed
+            }
+
+            row.innerHTML = `
+                <td>${order}</td>
+                <td>
+                    <a href="/puzzles/${puzzle._id}" class="puzzle-link">
+                        ${puzzle.name}
+                    </a>
+                </td>
+                <td>${puzzle.difficulty}/10</td>
+                <td>${formatCategory(puzzle.category)}</td>
+                <td>${puzzle.views || 0}</td>
+                <td>${puzzle.likes || 0}</td>
+                <td>${puzzle.completedCount || 0}</td>
+                <td style="text-align: center;">
+                    <span title="${getStatusText(isCompleted, attempts)}">${statusIcon}</span>
+                </td>
+            `;
+
+            // Add row styling based on status
+            if (isCompleted) {
+                row.style.background = '#f0f8f0';
+            } else if (attempts > 0) {
+                row.style.background = '#fff8f0';
+            }
+
+            return row;
+        }
+
+        // Format category name
+        function formatCategory(category) {
+            return category.split('-').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        // Get status text for tooltip
+        function getStatusText(isCompleted, attempts) {
+            if (isCompleted) {
+                return `Completed (${attempts} attempts)`;
+            } else if (attempts > 0) {
+                return `Attempted ${attempts} times`;
+            } else {
+                return 'Not attempted';
+            }
+        }
+
+        // Filter puzzles
+        function filterPuzzles() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const categoryFilter = document.getElementById('category-filter').value;
+            const difficultyFilter = document.getElementById('difficulty-filter').value;
+
+            puzzles = allPuzzles.filter(puzzle => {
+                // Search filter
+                const matchesSearch = !searchTerm || 
+                    puzzle.name.toLowerCase().includes(searchTerm) ||
+                    (puzzle.description && puzzle.description.toLowerCase().includes(searchTerm));
+
+                // Category filter
+                const matchesCategory = !categoryFilter || puzzle.category === categoryFilter;
+
+                // Difficulty filter
+                let matchesDifficulty = true;
+                if (difficultyFilter) {
+                    const diffRange = parseInt(difficultyFilter);
+                    matchesDifficulty = puzzle.difficulty >= diffRange && puzzle.difficulty <= diffRange + 1;
+                }
+
+                return matchesSearch && matchesCategory && matchesDifficulty;
+            });
+
+            renderPuzzles();
+
+            // Show/hide no results message
+            if (puzzles.length === 0 && allPuzzles.length > 0) {
+                document.getElementById('puzzle-tbody').innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 30px;">
+                            <h3>No puzzles match your filters</h3>
+                            <p>Try adjusting your search criteria</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Sort puzzles
+        function sortPuzzles(field) {
+            const direction = sortDirection[field] === 'asc' ? 'desc' : 'asc';
+            sortDirection[field] = direction;
+
+            puzzles.sort((a, b) => {
+                let aValue = a[field];
+                let bValue = b[field];
+
+                // Handle special cases
+                if (field === 'order') {
+                    aValue = allPuzzles.indexOf(a) + 1;
+                    bValue = allPuzzles.indexOf(b) + 1;
+                } else if (field === 'completed') {
+                    aValue = a.completedCount || 0;
+                    bValue = b.completedCount || 0;
+                }
+
+                if (direction === 'asc') {
+                    return aValue > bValue ? 1 : -1;
+                } else {
+                    return aValue < bValue ? 1 : -1;
+                }
+            });
+
+            renderPuzzles();
+        }
+
+        // Show collection info
+        function showCollectionInfo() {
+            if (!collection) return;
+
+            const difficultyText = getDifficultyText(collection.difficulty);
+            const createdDate = new Date(collection.createdAt).toLocaleDateString();
+            
+            const infoContent = document.getElementById('collection-info-content');
+            infoContent.innerHTML = `
+                <div class="status-info">
+                    <p><strong>Name:</strong> ${collection.name}</p>
+                    <p><strong>Description:</strong> ${collection.description || 'No description'}</p>
+                    <p><strong>Difficulty:</strong> ${difficultyText}</p>
+                    <p><strong>Total Puzzles:</strong> ${puzzles.length}</p>
+                    <p><strong>Total Views:</strong> ${collection.views || 0}</p>
+                    <p><strong>Total Likes:</strong> ${collection.likes || 0}</p>
+                    <p><strong>Created:</strong> ${createdDate}</p>
+                    <p><strong>Author:</strong> ${collection.author || 'Unknown'}</p>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="likeCollection()">
+                        ❤️ Like Collection (${collection.likes || 0})
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('collectionInfoModal').style.display = 'block';
+        }
+
+        // Get difficulty text
+        function getDifficultyText(difficulty) {
+            const difficultyMap = {
+                1: 'Beginner',
+                2: 'Elementary', 
+                3: 'Intermediate',
+                4: 'Advanced',
+                5: 'Expert'
+            };
+            return difficultyMap[difficulty] || 'Unknown';
+        }
+
+        // Show progress
+        function showProgress() {
+            const totalPuzzles = allPuzzles.length;
+            const completedPuzzles = Object.values(userProgress).filter(p => p.completed).length;
+            const attemptedPuzzles = Object.keys(userProgress).length;
+            const completionRate = totalPuzzles > 0 ? Math.round((completedPuzzles / totalPuzzles) * 100) : 0;
+
+            const progressContent = document.getElementById('progress-content');
+            progressContent.innerHTML = `
+                <div class="status-info">
+                    <h3>Collection Progress</h3>
+                    <p><strong>Completed:</strong> ${completedPuzzles} / ${totalPuzzles} (${completionRate}%)</p>
+                    <p><strong>Attempted:</strong> ${attemptedPuzzles} puzzles</p>
+                    <p><strong>Success Rate:</strong> ${attemptedPuzzles > 0 ? Math.round((completedPuzzles / attemptedPuzzles) * 100) : 0}%</p>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>Progress by Difficulty</h4>
+                    ${generateDifficultyProgress()}
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>Progress by Category</h4>
+                    ${generateCategoryProgress()}
+                </div>
+            `;
+            
+            document.getElementById('progressModal').style.display = 'block';
+        }
+
+        // Generate difficulty progress breakdown
+        function generateDifficultyProgress() {
+            const difficultyStats = {};
+            
+            allPuzzles.forEach(puzzle => {
+                const difficulty = puzzle.difficulty;
+                if (!difficultyStats[difficulty]) {
+                    difficultyStats[difficulty] = { total: 0, completed: 0 };
+                }
+                difficultyStats[difficulty].total++;
+                
+                const progress = userProgress[puzzle._id];
+                if (progress && progress.completed) {
+                    difficultyStats[difficulty].completed++;
+                }
+            });
+
+            let html = '<div class="status-info">';
+            Object.entries(difficultyStats).sort(([a], [b]) => a - b).forEach(([difficulty, stats]) => {
+                const rate = Math.round((stats.completed / stats.total) * 100);
+                html += `<p><strong>Difficulty ${difficulty}:</strong> ${stats.completed}/${stats.total} (${rate}%)</p>`;
+            });
+            html += '</div>';
+            
+            return html;
+        }
+
+        // Generate category progress breakdown
+        function generateCategoryProgress() {
+            const categoryStats = {};
+            
+            allPuzzles.forEach(puzzle => {
+                const category = puzzle.category;
+                if (!categoryStats[category]) {
+                    categoryStats[category] = { total: 0, completed: 0 };
+                }
+                categoryStats[category].total++;
+                
+                const progress = userProgress[puzzle._id];
+                if (progress && progress.completed) {
+                    categoryStats[category].completed++;
+                }
+            });
+
+            let html = '<div class="status-info">';
+            Object.entries(categoryStats).forEach(([category, stats]) => {
+                const rate = Math.round((stats.completed / stats.total) * 100);
+                html += `<p><strong>${formatCategory(category)}:</strong> ${stats.completed}/${stats.total} (${rate}%)</p>`;
+            });
+            html += '</div>';
+            
+            return html;
+        }
+
+        // Like collection
+        async function likeCollection() {
+            try {
+                const response = await fetch(`/api/collections/${collectionId}/like`, { method: 'POST' });
+                if (response.ok) {
+                    collection.likes = (collection.likes || 0) + 1;
+                    showStatusMessage('Collection liked!', 'success');
+                    showCollectionInfo(); // Refresh the modal
+                } else {
+                    showStatusMessage('You have already liked this collection', 'info');
+                }
+            } catch (error) {
+                console.error('Error liking collection:', error);
+                showStatusMessage('Error liking collection', 'error');
+            }
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Show status message
+        function showStatusMessage(message, type) {
+            const container = document.getElementById('status-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            
+            container.appendChild(messageDiv);
+            
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                if (container.contains(messageDiv)) {
+                    container.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

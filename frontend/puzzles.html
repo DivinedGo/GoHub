@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Puzzle Collections</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Go Puzzle Collections</h1>
+            <p>Master the art of Go through challenging puzzles</p>
+        </div>
+
+        <div class="nav">
+            <a href="puzzles.html">Home</a>
+            <a href="#" onclick="showAbout()">About</a>
+            <a href="#" onclick="showStats()">Statistics</a>
+        </div>
+
+        <div id="collections-container">
+            <div class="collections-grid" id="collections-grid">
+                <!-- Collections will be loaded here -->
+            </div>
+        </div>
+
+        <div id="loading" style="text-align: center; display: none;">
+            <div class="loading"></div>
+            <p style="color: white; margin-top: 10px;">Loading puzzle collections...</p>
+        </div>
+
+        <div id="no-collections" style="text-align: center; color: white; display: none;">
+            <h3>No puzzle collections available</h3>
+            <p>Check back later for new puzzle collections!</p>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('aboutModal')">&times;</span>
+            <h2>About Go Puzzles</h2>
+            <p>Welcome to our Go puzzle platform! Here you can practice and improve your Go skills through carefully curated puzzle collections.</p>
+            <p>Each puzzle collection contains multiple problems ranging from beginner to advanced levels. Click on any collection to start solving puzzles!</p>
+            <p><strong>How to play:</strong></p>
+            <ul>
+                <li>Click on a puzzle collection to view the puzzle list</li>
+                <li>Select a puzzle to start solving</li>
+                <li>Place stones by clicking on the board intersections</li>
+                <li>Try to find the correct solution sequence</li>
+                <li>Learn from both correct and incorrect variations</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('statsModal')">&times;</span>
+            <h2>Your Statistics</h2>
+            <div id="user-stats">
+                <!-- Stats will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let collections = [];
+        let userStats = {
+            totalSolved: 0,
+            totalAttempts: 0,
+            collectionsCompleted: 0,
+            averageRating: 0
+        };
+
+        // Load collections on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCollections();
+            loadUserStats();
+        });
+
+        // Load puzzle collections from API
+        async function loadCollections() {
+            const loading = document.getElementById('loading');
+            const collectionsGrid = document.getElementById('collections-grid');
+            const noCollections = document.getElementById('no-collections');
+
+            loading.style.display = 'block';
+            collectionsGrid.innerHTML = '';
+            noCollections.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/collections');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch collections');
+                }
+
+                collections = await response.json();
+                loading.style.display = 'none';
+
+                if (collections.length === 0) {
+                    noCollections.style.display = 'block';
+                    return;
+                }
+
+                // Render collections
+                collections.forEach(collection => {
+                    const collectionCard = createCollectionCard(collection);
+                    collectionsGrid.appendChild(collectionCard);
+                });
+
+            } catch (error) {
+                console.error('Error loading collections:', error);
+                loading.style.display = 'none';
+                
+                // Show error message
+                collectionsGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; color: white;">
+                        <h3>Error loading collections</h3>
+                        <p>Please try refreshing the page</p>
+                        <button class="btn" onclick="loadCollections()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Create collection card element
+        function createCollectionCard(collection) {
+            const card = document.createElement('div');
+            card.className = 'collection-card';
+            card.onclick = () => goToCollection(collection._id);
+
+            const difficulty = getDifficultyText(collection.difficulty);
+            const puzzleCount = collection.puzzles ? collection.puzzles.length : 0;
+
+            card.innerHTML = `
+                <h3>${collection.name}</h3>
+                <p>${collection.description || 'No description available'}</p>
+                <div class="collection-stats">
+                    <span><strong>Difficulty:</strong> ${difficulty}</span>
+                    <span><strong>Puzzles:</strong> ${puzzleCount}</span>
+                </div>
+                <div class="collection-stats">
+                    <span><strong>Views:</strong> ${collection.views || 0}</span>
+                    <span><strong>Likes:</strong> ${collection.likes || 0}</span>
+                </div>
+                ${collection.private ? '<div style="color: #dc3545; font-weight: bold; margin-top: 10px;">🔒 Private Collection</div>' : ''}
+            `;
+
+            return card;
+        }
+
+        // Get difficulty text
+        function getDifficultyText(difficulty) {
+            const difficultyMap = {
+                1: 'Beginner',
+                2: 'Elementary', 
+                3: 'Intermediate',
+                4: 'Advanced',
+                5: 'Expert'
+            };
+            return difficultyMap[difficulty] || 'Unknown';
+        }
+
+        // Navigate to collection
+        function goToCollection(collectionId) {
+            window.location.href = `/puzzle-collections/${collectionId}`;
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/user/stats');
+                if (response.ok) {
+                    userStats = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+
+        // Show about modal
+        function showAbout() {
+            document.getElementById('aboutModal').style.display = 'block';
+        }
+
+        // Show stats modal
+        function showStats() {
+            const statsDiv = document.getElementById('user-stats');
+            statsDiv.innerHTML = `
+                <div class="status-info" style="margin-bottom: 20px;">
+                    <p><strong>Total Puzzles Solved:</strong> ${userStats.totalSolved}</p>
+                    <p><strong>Total Attempts:</strong> ${userStats.totalAttempts}</p>
+                    <p><strong>Collections Completed:</strong> ${userStats.collectionsCompleted}</p>
+                    <p><strong>Success Rate:</strong> ${userStats.totalAttempts > 0 ? Math.round((userStats.totalSolved / userStats.totalAttempts) * 100) : 0}%</p>
+                </div>
+                <p><em>Keep practicing to improve your Go skills!</em></p>
+            `;
+            document.getElementById('statsModal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Search functionality
+        function searchCollections(query) {
+            const collectionsGrid = document.getElementById('collections-grid');
+            const filteredCollections = collections.filter(collection => 
+                collection.name.toLowerCase().includes(query.toLowerCase()) ||
+                (collection.description && collection.description.toLowerCase().includes(query.toLowerCase()))
+            );
+
+            collectionsGrid.innerHTML = '';
+            filteredCollections.forEach(collection => {
+                const collectionCard = createCollectionCard(collection);
+                collectionsGrid.appendChild(collectionCard);
+            });
+
+            if (filteredCollections.length === 0 && query.length > 0) {
+                collectionsGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; color: white;">
+                        <h3>No collections found</h3>
+                        <p>Try a different search term</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Add search functionality to header
+        document.addEventListener('DOMContentLoaded', function() {
+            const header = document.querySelector('.header');
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Search collections...';
+            searchInput.style.cssText = `
+                padding: 10px 20px;
+                border: none;
+                border-radius: 25px;
+                margin-top: 20px;
+                width: 300px;
+                max-width: 100%;
+                font-size: 16px;
+                text-align: center;
+            `;
+            
+            searchInput.addEventListener('input', (e) => {
+                searchCollections(e.target.value);
+            });
+            
+            header.appendChild(searchInput);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

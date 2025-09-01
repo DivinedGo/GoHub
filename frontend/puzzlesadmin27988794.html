@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Puzzle Collections</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="admin-header">
+            <h1>🔒 Admin Panel - Puzzle Collections</h1>
+            <p>Manage and create Go puzzle collections</p>
+        </div>
+
+        <div class="nav">
+            <a href="puzzles.html">User View</a>
+            <a href="puzzlesadmin27988794.html">Collections</a>
+            <a href="puzzlesadmincreate27988794.html">Create Puzzle</a>
+            <a href="#" onclick="showAdminStats()">Statistics</a>
+        </div>
+
+        <div class="control-panel">
+            <h2>Create New Collection</h2>
+            <form id="collection-form">
+                <div class="control-group">
+                    <label for="collection-name">Collection Name *</label>
+                    <input type="text" id="collection-name" name="name" required placeholder="Enter collection name">
+                </div>
+
+                <div class="control-group">
+                    <label for="collection-description">Description</label>
+                    <textarea id="collection-description" name="description" rows="3" placeholder="Enter collection description"></textarea>
+                </div>
+
+                <div class="control-group">
+                    <label for="collection-difficulty">Difficulty Level *</label>
+                    <select id="collection-difficulty" name="difficulty" required>
+                        <option value="">Select difficulty</option>
+                        <option value="1">1 - Beginner</option>
+                        <option value="2">2 - Elementary</option>
+                        <option value="3">3 - Intermediate</option>
+                        <option value="4">4 - Advanced</option>
+                        <option value="5">5 - Expert</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="collection-private" name="private">
+                        Private Collection (only visible to admins)
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="color-transform" name="colorTransform">
+                        Enable Color Transform (allow flipping black/white stones)
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="position-transform" name="positionTransform">
+                        Enable Position Transform (allow rotating/mirroring board)
+                    </label>
+                </div>
+
+                <button type="submit" class="btn">Create Collection</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+            </form>
+        </div>
+
+        <div class="puzzle-table-container">
+            <h2>Existing Collections</h2>
+            <div id="collections-loading" style="text-align: center; display: none;">
+                <div class="loading"></div>
+                <p>Loading collections...</p>
+            </div>
+            
+            <table class="puzzle-table" id="collections-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th onclick="sortCollections('name')">Name ↕</th>
+                        <th onclick="sortCollections('difficulty')">Difficulty ↕</th>
+                        <th onclick="sortCollections('puzzleCount')">Puzzles ↕</th>
+                        <th onclick="sortCollections('views')">Views ↕</th>
+                        <th onclick="sortCollections('likes')">Likes ↕</th>
+                        <th onclick="sortCollections('createdAt')">Created ↕</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="collections-tbody">
+                    <!-- Collections will be loaded here -->
+                </tbody>
+            </table>
+
+            <div id="no-collections-admin" style="text-align: center; display: none;">
+                <h3>No collections found</h3>
+                <p>Create your first puzzle collection using the form above!</p>
+            </div>
+        </div>
+
+        <!-- Status messages -->
+        <div id="status-messages"></div>
+    </div>
+
+    <!-- Edit Collection Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editModal')">&times;</span>
+            <h2>Edit Collection</h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-collection-id">
+                
+                <div class="control-group">
+                    <label for="edit-collection-name">Collection Name *</label>
+                    <input type="text" id="edit-collection-name" name="name" required>
+                </div>
+
+                <div class="control-group">
+                    <label for="edit-collection-description">Description</label>
+                    <textarea id="edit-collection-description" name="description" rows="3"></textarea>
+                </div>
+
+                <div class="control-group">
+                    <label for="edit-collection-difficulty">Difficulty Level *</label>
+                    <select id="edit-collection-difficulty" name="difficulty" required>
+                        <option value="1">1 - Beginner</option>
+                        <option value="2">2 - Elementary</option>
+                        <option value="3">3 - Intermediate</option>
+                        <option value="4">4 - Advanced</option>
+                        <option value="5">5 - Expert</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="edit-collection-private" name="private">
+                        Private Collection
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="edit-color-transform" name="colorTransform">
+                        Enable Color Transform
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="edit-position-transform" name="positionTransform">
+                        Enable Position Transform
+                    </label>
+                </div>
+
+                <button type="submit" class="btn">Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Stats Modal -->
+    <div id="adminStatsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('adminStatsModal')">&times;</span>
+            <h2>Admin Statistics</h2>
+            <div id="admin-stats-content">
+                <!-- Stats will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let collections = [];
+        let sortDirection = {};
+
+        // Load collections on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCollections();
+            setupEventListeners();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Collection form submission
+            document.getElementById('collection-form').addEventListener('submit', handleCreateCollection);
+            
+            // Edit form submission
+            document.getElementById('edit-form').addEventListener('submit', handleEditCollection);
+        }
+
+        // Handle create collection form submission
+        async function handleCreateCollection(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const collectionData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                difficulty: parseInt(formData.get('difficulty')),
+                private: formData.get('private') === 'on',
+                colorTransform: formData.get('colorTransform') === 'on',
+                positionTransform: formData.get('positionTransform') === 'on'
+            };
+
+            try {
+                const response = await fetch('/api/collections', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-key': 'admin123' // In production, this should be properly secured
+                    },
+                    body: JSON.stringify(collectionData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create collection');
+                }
+
+                const result = await response.json();
+                showStatusMessage('Collection created successfully!', 'success');
+                resetForm();
+                loadCollections();
+
+            } catch (error) {
+                console.error('Error creating collection:', error);
+                showStatusMessage('Error creating collection. Please try again.', 'error');
+            }
+        }
+
+        // Handle edit collection form submission
+        async function handleEditCollection(e) {
+            e.preventDefault();
+            
+            const collectionId = document.getElementById('edit-collection-id').value;
+            const formData = new FormData(e.target);
+            const collectionData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                difficulty: parseInt(formData.get('difficulty')),
+                private: formData.get('private') === 'on',
+                colorTransform: formData.get('colorTransform') === 'on',
+                positionTransform: formData.get('positionTransform') === 'on'
+            };
+
+            try {
+                const response = await fetch(`/api/collections/${collectionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-key': 'admin123' // In production, this should be properly secured
+                    },
+                    body: JSON.stringify(collectionData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update collection');
+                }
+
+                showStatusMessage('Collection updated successfully!', 'success');
+                closeModal('editModal');
+                loadCollections();
+
+            } catch (error) {
+                console.error('Error updating collection:', error);
+                showStatusMessage('Error updating collection. Please try again.', 'error');
+            }
+        }
+
+        // Load collections from API
+        async function loadCollections() {
+            const loading = document.getElementById('collections-loading');
+            const table = document.getElementById('collections-table');
+            const noCollections = document.getElementById('no-collections-admin');
+            const tbody = document.getElementById('collections-tbody');
+
+            loading.style.display = 'block';
+            table.style.display = 'none';
+            noCollections.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/admin/collections', {
+                    headers: {
+                        'x-admin-key': 'admin123' // In production, this should be properly secured
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch collections');
+                }
+
+                collections = await response.json();
+                loading.style.display = 'none';
+
+                if (collections.length === 0) {
+                    noCollections.style.display = 'block';
+                    return;
+                }
+
+                // Render collections table
+                tbody.innerHTML = '';
+                collections.forEach(collection => {
+                    const row = createCollectionRow(collection);
+                    tbody.appendChild(row);
+                });
+
+                table.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading collections:', error);
+                loading.style.display = 'none';
+                showStatusMessage('Error loading collections. Please refresh the page.', 'error');
+            }
+        }
+
+        // Create collection table row
+        function createCollectionRow(collection) {
+            const row = document.createElement('tr');
+            const puzzleCount = collection.puzzles ? collection.puzzles.length : 0;
+            const difficulty = getDifficultyText(collection.difficulty);
+            const createdDate = new Date(collection.createdAt).toLocaleDateString();
+
+            row.innerHTML = `
+                <td>
+                    <a href="/puzzle-collections/${collection._id}" class="puzzle-link">
+                        ${collection.name}
+                    </a>
+                    ${collection.private ? ' 🔒' : ''}
+                </td>
+                <td>${difficulty}</td>
+                <td>${puzzleCount}</td>
+                <td>${collection.views || 0}</td>
+                <td>${collection.likes || 0}</td>
+                <td>${createdDate}</td>
+                <td>
+                    <button class="btn btn-secondary" onclick="editCollection('${collection._id}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteCollection('${collection._id}', '${collection.name}')">Delete</button>
+                    <a href="puzzlesadmincreate27988794.html?collection=${collection._id}" class="btn">Add Puzzle</a>
+                </td>
+            `;
+
+            return row;
+        }
+
+        // Get difficulty text
+        function getDifficultyText(difficulty) {
+            const difficultyMap = {
+                1: 'Beginner',
+                2: 'Elementary', 
+                3: 'Intermediate',
+                4: 'Advanced',
+                5: 'Expert'
+            };
+            return difficultyMap[difficulty] || 'Unknown';
+        }
+
+        // Sort collections
+        function sortCollections(field) {
+            const direction = sortDirection[field] === 'asc' ? 'desc' : 'asc';
+            sortDirection[field] = direction;
+
+            collections.sort((a, b) => {
+                let aValue = a[field];
+                let bValue = b[field];
+
+                // Handle special cases
+                if (field === 'puzzleCount') {
+                    aValue = a.puzzles ? a.puzzles.length : 0;
+                    bValue = b.puzzles ? b.puzzles.length : 0;
+                } else if (field === 'createdAt') {
+                    aValue = new Date(a[field]);
+                    bValue = new Date(b[field]);
+                }
+
+                if (direction === 'asc') {
+                    return aValue > bValue ? 1 : -1;
+                } else {
+                    return aValue < bValue ? 1 : -1;
+                }
+            });
+
+            // Re-render table
+            const tbody = document.getElementById('collections-tbody');
+            tbody.innerHTML = '';
+            collections.forEach(collection => {
+                const row = createCollectionRow(collection);
+                tbody.appendChild(row);
+            });
+        }
+
+        // Edit collection
+        function editCollection(collectionId) {
+            const collection = collections.find(c => c._id === collectionId);
+            if (!collection) return;
+
+            // Populate edit form
+            document.getElementById('edit-collection-id').value = collection._id;
+            document.getElementById('edit-collection-name').value = collection.name;
+            document.getElementById('edit-collection-description').value = collection.description || '';
+            document.getElementById('edit-collection-difficulty').value = collection.difficulty;
+            document.getElementById('edit-collection-private').checked = collection.private || false;
+            document.getElementById('edit-color-transform').checked = collection.colorTransform || false;
+            document.getElementById('edit-position-transform').checked = collection.positionTransform || false;
+
+            // Show modal
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Delete collection
+        async function deleteCollection(collectionId, collectionName) {
+            if (!confirm(`Are you sure you want to delete "${collectionName}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/collections/${collectionId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'x-admin-key': 'admin123' // In production, this should be properly secured
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete collection');
+                }
+
+                showStatusMessage('Collection deleted successfully!', 'success');
+                loadCollections();
+
+            } catch (error) {
+                console.error('Error deleting collection:', error);
+                showStatusMessage('Error deleting collection. Please try again.', 'error');
+            }
+        }
+
+        // Show admin statistics
+        async function showAdminStats() {
+            try {
+                const response = await fetch('/api/admin/stats', {
+                    headers: {
+                        'x-admin-key': 'admin123' // In production, this should be properly secured
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch stats');
+                
+                const stats = await response.json();
+                const statsContent = document.getElementById('admin-stats-content');
+                
+                statsContent.innerHTML = `
+                    <div class="status-info" style="margin-bottom: 20px;">
+                        <h3>Platform Statistics</h3>
+                        <p><strong>Total Collections:</strong> ${stats.totalCollections || 0}</p>
+                        <p><strong>Total Puzzles:</strong> ${stats.totalPuzzles || 0}</p>
+                        <p><strong>Total Users:</strong> ${stats.totalUsers || 0}</p>
+                        <p><strong>Total Puzzle Attempts:</strong> ${stats.totalAttempts || 0}</p>
+                        <p><strong>Total Puzzles Solved:</strong> ${stats.totalSolved || 0}</p>
+                        <p><strong>Average Success Rate:</strong> ${stats.averageSuccessRate || 0}%</p>
+                    </div>
+                    
+                    <div class="status-info">
+                        <h3>Most Popular Collections</h3>
+                        <div id="popular-collections">
+                            ${stats.popularCollections ? stats.popularCollections.map(c => 
+                                `<p><strong>${c.name}:</strong> ${c.views} views, ${c.likes} likes</p>`
+                            ).join('') : '<p>No data available</p>'}
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('adminStatsModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading admin stats:', error);
+                showStatusMessage('Error loading statistics.', 'error');
+            }
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('collection-form').reset();
+        }
+
+        // Show status message
+        function showStatusMessage(message, type) {
+            const container = document.getElementById('status-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            
+            container.appendChild(messageDiv);
+            
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                container.removeChild(messageDiv);
+            }, 5000);
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
