@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
+  "functions": {
+    "backend/server.js": {
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
@@ -13,23 +12,23 @@
     },
     {
       "src": "/puzzles$",
-      "dest": "/frontend/puzzles.html"
+      "dest": "/frontend/puzzles/puzzles.html"
     },
     {
       "src": "/puzzle-collections/([^/]+)$",
-      "dest": "/frontend/puzzle-collection.html"
+      "dest": "/frontend/puzzles/puzzle-collection.html"
     },
     {
       "src": "/puzzles/([^/]+)$",
-      "dest": "/frontend/puzzle.html"
+      "dest": "/frontend/puzzles/puzzle.html"
     },
     {
       "src": "/puzzlesadmin27988794$",
-      "dest": "/frontend/puzzlesadmin27988794.html"
+      "dest": "/frontend/puzzles/puzzlesadmin27988794.html"
     },
     {
       "src": "/puzzlesadmincreate27988794$",
-      "dest": "/frontend/puzzlesadmincreate27988794.html"
+      "dest": "/frontend/puzzles/puzzlesadmincreate27988794.html"
     },
     {
       "src": "/styles.css",
@@ -41,17 +40,12 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/puzzles.html"
+      "dest": "/frontend/puzzles/puzzles.html"
     }
   ],
   "env": {
     "MONGODB_URI": "@mongodb_uri",
     "ADMIN_KEY": "@admin_key",
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "backend/server.js": {
-      "maxDuration": 30
-    }
   }
 }
